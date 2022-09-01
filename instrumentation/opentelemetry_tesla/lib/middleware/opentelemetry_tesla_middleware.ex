@@ -10,7 +10,8 @@ defmodule Tesla.Middleware.OpenTelemetry do
 
   ## Options
 
-    - `:span_name` - override span name
+    - `:span_name` - override span name (string)
+    - `:skip_propagation` - omit propagation headers in the http call (boolean)
 
   """
   require OpenTelemetry.Tracer
