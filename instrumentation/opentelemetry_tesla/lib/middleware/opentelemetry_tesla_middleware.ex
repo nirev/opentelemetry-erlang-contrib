@@ -18,10 +18,11 @@ defmodule Tesla.Middleware.OpenTelemetry do
 
   def call(env, next, opts) do
     span_name = Keyword.get(opts, :span_name, get_span_name(env))
+    skip_propagation? = Keyword.get(opts, :skip_propagation, false)
 
     OpenTelemetry.Tracer.with_span span_name, %{kind: :client} do
       env
-      |> Tesla.put_headers(:otel_propagator_text_map.inject([]))
+      |> inject_headers(skip_propagation?)
       |> Tesla.run(next)
       |> set_span_attributes()
       |> handle_result()
@@ -33,6 +34,12 @@ defmodule Tesla.Middleware.OpenTelemetry do
       nil -> "HTTP #{http_method(env.method)}"
       _ -> URI.parse(env.url).path
     end
+  end
+
+  defp inject_headers(env, true = _skip_propagation?), do: env
+
+  defp inject_headers(env, _skip_propagation?) do
+    Tesla.put_headers(env, :otel_propagator_text_map.inject([]))
   end
 
   defp set_span_attributes({_, %Tesla.Env{} = env} = result) do

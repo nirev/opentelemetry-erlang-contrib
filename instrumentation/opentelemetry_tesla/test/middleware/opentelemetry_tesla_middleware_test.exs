@@ -363,27 +363,45 @@ defmodule Tesla.Middleware.OpenTelemetryTest do
     assert response_size == byte_size(response)
   end
 
-  test "Injects distributed tracing headers" do
-    OpentelemetryTelemetry.start_telemetry_span(
-      "tracer_id",
-      "my_label",
-      %{},
-      %{kind: :client}
-    )
+  describe "tracing headers" do
+    test "are injected by default" do
+      OpentelemetryTelemetry.start_telemetry_span(
+        "tracer_id",
+        "my_label",
+        %{},
+        %{kind: :client}
+      )
 
-    assert {:ok,
-            %Tesla.Env{
-              headers: [
-                {"traceparent", traceparent}
-              ]
-            }} =
-             Tesla.Middleware.OpenTelemetry.call(
-               _env = %Tesla.Env{url: ""},
-               _next = [],
-               _opts = []
-             )
+      assert {:ok,
+              %Tesla.Env{
+                headers: [
+                  {"traceparent", traceparent}
+                ]
+              }} =
+               Tesla.Middleware.OpenTelemetry.call(
+                 _env = %Tesla.Env{url: ""},
+                 _next = [],
+                 _opts = []
+               )
 
-    assert is_binary(traceparent)
+      assert is_binary(traceparent)
+    end
+
+    test "are skipped when skip_propagation opt is true" do
+      OpentelemetryTelemetry.start_telemetry_span(
+        "tracer_id",
+        "my_label",
+        %{},
+        %{kind: :client}
+      )
+
+      assert {:ok, %Tesla.Env{headers: []}} =
+               Tesla.Middleware.OpenTelemetry.call(
+                 _env = %Tesla.Env{url: ""},
+                 _next = [],
+                 _opts = [skip_propagation: true]
+               )
+    end
   end
 
   defp endpoint_url(port), do: "http://localhost:#{port}/"
